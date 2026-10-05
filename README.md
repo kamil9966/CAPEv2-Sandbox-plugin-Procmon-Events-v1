@@ -31,7 +31,8 @@
 
 
 
-Источник данных:
+
+## Источник данных:
 
 ```text
 storage/analyses/<TASK_ID>/aux/procmon.xml
@@ -39,7 +40,7 @@ storage/analyses/<TASK_ID>/aux/procmon.xml
 
 ## Установка
 
-Скачай/клонируй репозиторий на CAPE host и запускай от владельца дерева CAPE (обычно `cape`):
+Скачайте или клонируйте репозиторий на CAPE host и запускай от владельца дерева CAPE (обычно `cape`):
 
 ```bash
 cd cape-procmon-investigation-ui
