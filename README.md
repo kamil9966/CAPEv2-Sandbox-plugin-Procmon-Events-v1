@@ -7,7 +7,10 @@
 
 ## Возможности
 
-<img width="2552" height="952" alt="1- Общий вид" src="https://github.com/user-attachments/assets/4654112b-74a3-4ff2-b83a-f04a943ef0c2" />
+
+<img width="2552" height="925" alt="1- Общий вид" src="https://github.com/user-attachments/assets/be81ca2a-ff9b-4fef-8c4d-2912a17d18d0" />
+
+
 
 
 - вкладка **Procmon Events** в отчёте CAPE;
@@ -23,7 +26,8 @@
 - backup + автоматический rollback при ошибке установки;
 - миграция базы CAPE не требуется.
 
-<img width="705" height="816" alt="2 Вид карточки" src="https://github.com/user-attachments/assets/d67530a3-107f-4e64-bb06-449e7a6be6fd" />
+
+<img width="705" height="816" alt="2 Вид карточки" src="https://github.com/user-attachments/assets/c0cfff52-eb62-4153-9605-05128c4cd060" />
 
 
 
