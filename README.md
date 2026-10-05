@@ -1,7 +1,9 @@
 
 # CAPEv2-Sandbox-plugin Procmon-Events Investigation UI
 
+
 Расширение WebUI для CAPEv2: добавляет в обычный отчёт вкладку **Procmon Events** и позволяет нормально работать с  `procmon.xml` как с "журналом" расследования.
+
 
 > Это community WebUI extension/patch, а не официальный plugin API CAPE.
 
