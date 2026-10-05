@@ -1,0 +1,14 @@
+Repository name:
+cape-procmon-investigation-ui
+
+Short description:
+Indexed Procmon investigation UI for CAPEv2 reports: event cards, command-line/parent-process enrichment, recursive field-aware search, pagination and safe rollback installer.
+
+Suggested topics:
+cape, capev2, procmon, sysinternals, malware-analysis, sandbox, dfir, threat-hunting, django
+
+Suggested first release title:
+v1.0.0 — Procmon Investigation UI for CAPEv2
+
+Suggested release notes:
+Adds an indexed Procmon Events tab to CAPEv2 with clickable event cards, process metadata enrichment, recursive/field-aware search, pagination, raw XML fields, Copy JSON actions, installer validation and rollback. Includes an optional legacy Procmon capture stability patch and a tested narrow PMC profile.

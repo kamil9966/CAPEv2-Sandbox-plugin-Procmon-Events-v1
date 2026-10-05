@@ -1,0 +1,104 @@
+{% if not event %}
+<div class="alert alert-warning mb-0">Procmon event was not found.</div>
+{% else %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h5 class="mb-1">Event #{{ event.seq }}</h5>
+    <div class="text-muted small">{{ event.time|default:"Time unavailable" }}</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if event.process_name %}
+    <button type="button" class="btn btn-sm btn-outline-info procmon-card-filter"
+            data-field="process" data-value="{{ event.process_name }}">
+      <i class="fas fa-filter me-1"></i>Process
+    </button>
+    {% endif %}
+    {% if event.pid %}
+    <button type="button" class="btn btn-sm btn-outline-info procmon-card-filter"
+            data-field="pid" data-value="{{ event.pid }}">
+      <i class="fas fa-stream me-1"></i>Related PID
+    </button>
+    {% endif %}
+    {% if event.path %}
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="procmon-copy-path"
+            data-path="{{ event.path }}">
+      <i class="fas fa-copy me-1"></i>Copy path
+    </button>
+    {% endif %}
+    <button type="button" class="btn btn-sm btn-primary" id="procmon-copy-event">
+      <i class="fas fa-copy me-1"></i>Copy JSON
+    </button>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="card bg-black border-secondary h-100">
+      <div class="card-header border-secondary"><strong>Event</strong></div>
+      <div class="card-body p-0">
+        <table class="table table-dark table-sm mb-0">
+          <tbody>
+            <tr><td class="procmon-card-label">Process</td><td><code class="text-info">{{ event.process_name|default:"-" }}</code></td></tr>
+            <tr><td class="procmon-card-label">PID</td><td><code>{{ event.pid|default:"-" }}</code></td></tr>
+            <tr><td class="procmon-card-label">Operation</td><td><code>{{ event.operation|default:"-" }}</code></td></tr>
+            <tr><td class="procmon-card-label">Result</td><td>
+              {% if event.result == "SUCCESS" %}<span class="badge bg-success">{{ event.result }}</span>
+              {% elif "DENIED" in event.result or "NOT FOUND" in event.result %}<span class="badge bg-warning text-dark">{{ event.result }}</span>
+              {% else %}<span class="badge bg-secondary">{{ event.result|default:"-" }}</span>{% endif %}
+            </td></tr>
+            <tr><td class="procmon-card-label">Path</td><td><code class="text-break">{{ event.path|default:"-" }}</code></td></tr>
+            <tr><td class="procmon-card-label">Detail</td><td><div class="text-break">{{ event.detail|default:"-" }}</div></td></tr>
+            {% if event.duration %}<tr><td class="procmon-card-label">Duration</td><td><code>{{ event.duration }}</code></td></tr>{% endif %}
+            {% if event.tid %}<tr><td class="procmon-card-label">TID</td><td><code>{{ event.tid }}</code></td></tr>{% endif %}
+            {% if event.event_class %}<tr><td class="procmon-card-label">Event class</td><td><code>{{ event.event_class }}</code></td></tr>{% endif %}
+            {% if event.category %}<tr><td class="procmon-card-label">Category</td><td><code>{{ event.category }}</code></td></tr>{% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-5">
+    <div class="card bg-black border-secondary h-100">
+      <div class="card-header border-secondary"><strong>Process context</strong></div>
+      <div class="card-body p-0">
+        <table class="table table-dark table-sm mb-0">
+          <tbody>
+            {% if event.command_line %}<tr><td class="procmon-card-label">Command line</td><td><code class="text-break">{{ event.command_line }}</code></td></tr>{% endif %}
+            {% if event.image_path %}<tr><td class="procmon-card-label">Image</td><td><code class="text-break">{{ event.image_path }}</code></td></tr>{% endif %}
+            {% if event.parent_process_name %}<tr><td class="procmon-card-label">Parent process</td><td><code>{{ event.parent_process_name }}</code></td></tr>{% endif %}
+            {% if event.parent_pid %}<tr><td class="procmon-card-label">Parent PID</td><td><code>{{ event.parent_pid }}</code></td></tr>{% endif %}
+            {% if event.user %}<tr><td class="procmon-card-label">User / Owner</td><td><code>{{ event.user }}</code></td></tr>{% endif %}
+            {% if event.integrity %}<tr><td class="procmon-card-label">Integrity</td><td><code>{{ event.integrity }}</code></td></tr>{% endif %}
+            {% if event.is_64bit %}<tr><td class="procmon-card-label">64-bit</td><td><code>{{ event.is_64bit }}</code></td></tr>{% endif %}
+            {% if event.process_index %}<tr><td class="procmon-card-label">ProcessIndex</td><td><code>{{ event.process_index }}</code></td></tr>{% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card bg-black border-secondary mt-3">
+  <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+    <strong>All Procmon XML fields</strong>
+    <span class="text-muted small">recursive flattened view</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-dark table-striped table-sm mb-0 procmon-raw-fields">
+      <tbody>
+      {% for field in event.raw_fields %}
+        <tr>
+          <td><code>{{ field.name }}</code></td>
+          <td><div class="text-break">{{ field.value }}</div></td>
+        </tr>
+      {% empty %}
+        <tr><td class="text-muted">No additional XML fields.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<textarea id="procmon-event-json" class="d-none" aria-hidden="true">{{ event.json_text }}</textarea>
+{% endif %}

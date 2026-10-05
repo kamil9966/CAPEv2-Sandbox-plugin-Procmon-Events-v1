@@ -1,0 +1,378 @@
+<div class="card bg-dark border-secondary shadow-sm" id="procmon-ui-root">
+  <div class="card-header border-secondary d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h5 class="mb-0"><i class="fas fa-microscope me-2"></i>Procmon Events</h5>
+      {% if not procmon_page.error %}
+      <small class="text-muted">
+        {{ procmon_page.total_events }} matched /
+        {{ procmon_page.source_total }} total events ·
+        XML {{ procmon_page.file_size|filesizeformat }}
+        {% if procmon_page.cache == "sqlite" %}· indexed cache{% endif %}
+      </small>
+      {% endif %}
+    </div>
+    {% if not procmon_page.error %}
+    <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>Click any event to inspect</small>
+    {% endif %}
+  </div>
+
+  <div class="card-body">
+    {% if procmon_page.error %}
+      <div class="alert alert-warning mb-0">{{ procmon_page.error }}</div>
+    {% else %}
+      {% if procmon_page.warning %}
+      <div class="alert alert-warning py-2">{{ procmon_page.warning }}</div>
+      {% endif %}
+
+      <form id="procmon-filter-form" class="row g-2 align-items-end mb-2">
+        <div class="col-xl-4 col-lg-6">
+          <label class="form-label small text-muted">Recursive search — all XML fields</label>
+          <input class="form-control form-control-sm bg-dark text-light border-secondary"
+                 type="text" name="q" value="{{ procmon_page.q }}" maxlength="512"
+                 placeholder='powershell WriteFile · "ExecutionPolicy Bypass" · cmd:"-enc"'>
+        </div>
+        <div class="col-xl-2 col-lg-3">
+          <label class="form-label small text-muted">Process</label>
+          <input class="form-control form-control-sm bg-dark text-light border-secondary"
+                 type="text" name="process" value="{{ procmon_page.process }}"
+                 list="procmon-processes">
+          <datalist id="procmon-processes">
+            {% for item in procmon_page.facets.processes %}
+              <option value="{{ item.value }}">{{ item.count }}</option>
+            {% endfor %}
+          </datalist>
+        </div>
+        <div class="col-xl-1 col-lg-2">
+          <label class="form-label small text-muted">PID</label>
+          <input class="form-control form-control-sm bg-dark text-light border-secondary"
+                 type="text" name="pid" value="{{ procmon_page.pid }}">
+        </div>
+        <div class="col-xl-2 col-lg-3">
+          <label class="form-label small text-muted">Operation</label>
+          <input class="form-control form-control-sm bg-dark text-light border-secondary"
+                 type="text" name="operation" value="{{ procmon_page.operation }}"
+                 list="procmon-operations">
+          <datalist id="procmon-operations">
+            {% for item in procmon_page.facets.operations %}
+              <option value="{{ item.value }}">{{ item.count }}</option>
+            {% endfor %}
+          </datalist>
+        </div>
+        <div class="col-xl-1 col-lg-2">
+          <label class="form-label small text-muted">Result</label>
+          <input class="form-control form-control-sm bg-dark text-light border-secondary"
+                 type="text" name="result" value="{{ procmon_page.result }}"
+                 list="procmon-results">
+          <datalist id="procmon-results">
+            {% for item in procmon_page.facets.results %}
+              <option value="{{ item.value }}">{{ item.count }}</option>
+            {% endfor %}
+          </datalist>
+        </div>
+        <div class="col-xl-2 col-lg-4">
+          <label class="form-label small text-muted">Path contains</label>
+          <input class="form-control form-control-sm bg-dark text-light border-secondary"
+                 type="text" name="path" value="{{ procmon_page.path }}">
+        </div>
+        <div class="col-auto">
+          <label class="form-label small text-muted">Rows</label>
+          <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                  name="page_size">
+            {% for n in procmon_page.allowed_page_sizes %}
+              <option value="{{ n }}" {% if n == procmon_page.page_size %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label small text-muted">Order</label>
+          <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                  name="order">
+            <option value="asc" {% if procmon_page.order == "asc" %}selected{% endif %}>Oldest first</option>
+            <option value="desc" {% if procmon_page.order == "desc" %}selected{% endif %}>Newest first</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-sm btn-primary" type="submit">
+            <i class="fas fa-search me-1"></i>Apply
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="procmon-reset">Reset</button>
+        </div>
+      </form>
+
+      <div class="small text-muted mb-3 procmon-search-help">
+        AND search across every event/process XML field. Quotes keep phrases together.
+        Field syntax: <code>process:</code>, <code>pid:</code>, <code>operation:</code>,
+        <code>path:</code>, <code>result:</code>, <code>cmd:</code>, <code>parent:</code>,
+        <code>user:</code>, <code>integrity:</code>. Raw XML parameters also work, e.g.
+        <code>ProcessIndex:105</code> or <code>CustomField:value</code>.
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-dark table-hover table-striped table-sm align-middle mb-2 procmon-events-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Time</th>
+              <th>Process</th>
+              <th>PID</th>
+              <th>Operation</th>
+              <th>Path</th>
+              <th>Result</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for event in procmon_page.events %}
+            <tr class="procmon-event-row" data-seq="{{ event.seq }}" title="Open event #{{ event.seq }}">
+              <td class="text-muted">{{ event.seq }}</td>
+              <td class="text-nowrap"><small>{{ event.time|default:"-" }}</small></td>
+              <td>
+                <code class="text-info">{{ event.process_name|default:"-" }}</code>
+                {% if event.command_line %}
+                <div class="small text-muted procmon-cmd-preview text-truncate" title="{{ event.command_line }}">
+                  {{ event.command_line }}
+                </div>
+                {% endif %}
+              </td>
+              <td>{{ event.pid|default:"-" }}</td>
+              <td><code>{{ event.operation|default:"-" }}</code></td>
+              <td><code class="text-break">{{ event.path|default:"-" }}</code></td>
+              <td>
+                {% if event.result == "SUCCESS" %}
+                  <span class="badge bg-success">{{ event.result }}</span>
+                {% elif "DENIED" in event.result or "NOT FOUND" in event.result %}
+                  <span class="badge bg-warning text-dark">{{ event.result }}</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ event.result|default:"-" }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="small text-break procmon-detail">{{ event.detail|default:"-" }}</div>
+                {% if event.parent_process_name or event.parent_pid or event.user or event.integrity %}
+                <div class="small text-muted mt-1">
+                  {% if event.parent_process_name %}Parent: <code>{{ event.parent_process_name }}</code>{% endif %}
+                  {% if event.parent_pid %} <span class="ms-1">PPID: <code>{{ event.parent_pid }}</code></span>{% endif %}
+                  {% if event.user %} <span class="ms-1">User: <code>{{ event.user }}</code></span>{% endif %}
+                  {% if event.integrity %} <span class="ms-1">Integrity: <code>{{ event.integrity }}</code></span>{% endif %}
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="text-center text-muted py-4">No matching Procmon events.</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if procmon_page.total_pages %}
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+        <small class="text-muted">Page {{ procmon_page.page }} of {{ procmon_page.total_pages }}</small>
+        <nav aria-label="Procmon pagination">
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if procmon_page.page <= 1 %}disabled{% endif %}">
+              <a class="page-link procmon-page-link" href="#" data-page="{{ procmon_page.prev_page }}">Previous</a>
+            </li>
+            {% if procmon_page.show_first %}
+              <li class="page-item"><a class="page-link procmon-page-link" href="#" data-page="1">1</a></li>
+              {% if procmon_page.show_first_ellipsis %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+            {% endif %}
+            {% for n in procmon_page.page_numbers %}
+              <li class="page-item {% if n == procmon_page.page %}active{% endif %}">
+                <a class="page-link procmon-page-link" href="#" data-page="{{ n }}">{{ n }}</a>
+              </li>
+            {% endfor %}
+            {% if procmon_page.show_last %}
+              {% if procmon_page.show_last_ellipsis %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+              <li class="page-item"><a class="page-link procmon-page-link" href="#" data-page="{{ procmon_page.total_pages }}">{{ procmon_page.total_pages }}</a></li>
+            {% endif %}
+            <li class="page-item {% if procmon_page.page >= procmon_page.total_pages %}disabled{% endif %}">
+              <a class="page-link procmon-page-link" href="#" data-page="{{ procmon_page.next_page }}">Next</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal fade" id="procmon-event-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content bg-dark text-light border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title"><i class="fas fa-search-plus me-2"></i>Procmon Event</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="procmon-event-modal-body">
+        <div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>Loading event…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+#procmon-ui-root .procmon-detail { max-height: 6rem; overflow: auto; }
+#procmon-ui-root code, #procmon-event-modal code { white-space: pre-wrap; overflow-wrap: anywhere; }
+#procmon-ui-root .procmon-event-row { cursor: pointer; }
+#procmon-ui-root .procmon-event-row:hover { outline: 1px solid rgba(13,110,253,.45); outline-offset: -1px; }
+#procmon-ui-root .procmon-cmd-preview { max-width: 28rem; }
+#procmon-ui-root .procmon-search-help code { color: #8ab4f8; }
+#procmon-ui-root .page-link {
+  background: #212529;
+  border-color: #495057;
+  color: #dee2e6;
+}
+#procmon-ui-root .page-item.active .page-link {
+  background: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+#procmon-event-modal .procmon-card-label { width: 11rem; color: #adb5bd; }
+#procmon-event-modal .procmon-raw-fields td:first-child { width: 18rem; color: #adb5bd; }
+#procmon-event-modal .procmon-raw-fields td { vertical-align: top; }
+</style>
+
+<script>
+(function() {
+  const baseUrl = "{% url 'procmon_events' id %}";
+
+  function currentParams(page) {
+    const data = $("#procmon-filter-form").serializeArray();
+    data.push({name: "page", value: page || 1});
+    return data;
+  }
+
+  function reloadProcmon(params) {
+    const $tab = $("#procmon");
+    $tab.css("opacity", "0.65");
+    $.ajax({
+      url: baseUrl,
+      data: params,
+      headers: {"X-Requested-With": "XMLHttpRequest"},
+      success: function(html) { $tab.html(html); },
+      error: function() {
+        $tab.html('<div class="alert alert-danger">Failed to load Procmon events.</div>');
+      },
+      complete: function() { $tab.css("opacity", "1"); }
+    });
+  }
+
+  function showModal() {
+    const el = document.getElementById("procmon-event-modal");
+    if (!el) return;
+    if (window.bootstrap && bootstrap.Modal) {
+      bootstrap.Modal.getOrCreateInstance(el).show();
+    } else if ($.fn.modal) {
+      $(el).modal("show");
+    }
+  }
+
+  function hideModal() {
+    const el = document.getElementById("procmon-event-modal");
+    if (!el) return;
+    if (window.bootstrap && bootstrap.Modal) {
+      const instance = bootstrap.Modal.getInstance(el);
+      if (instance) instance.hide();
+    } else if ($.fn.modal) {
+      $(el).modal("hide");
+    }
+  }
+
+  function openEvent(seq) {
+    const $body = $("#procmon-event-modal-body");
+    $body.html('<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>Loading event #' + seq + '…</div>');
+    showModal();
+    $.ajax({
+      url: baseUrl,
+      data: {event_seq: seq},
+      headers: {"X-Requested-With": "XMLHttpRequest"},
+      success: function(html) { $body.html(html); },
+      error: function() { $body.html('<div class="alert alert-danger mb-0">Failed to load Procmon event.</div>'); }
+    });
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    try { document.execCommand("copy"); } finally { document.body.removeChild(el); }
+    return Promise.resolve();
+  }
+
+  $(document)
+    .off("submit.procmon", "#procmon-filter-form")
+    .on("submit.procmon", "#procmon-filter-form", function(event) {
+      event.preventDefault();
+      reloadProcmon(currentParams(1));
+    });
+
+  $(document)
+    .off("click.procmon", ".procmon-page-link")
+    .on("click.procmon", ".procmon-page-link", function(event) {
+      event.preventDefault();
+      if ($(this).closest(".page-item").hasClass("disabled")) return;
+      reloadProcmon(currentParams($(this).data("page")));
+    });
+
+  $(document)
+    .off("click.procmon", "#procmon-reset")
+    .on("click.procmon", "#procmon-reset", function() {
+      reloadProcmon([
+        {name: "page", value: 1},
+        {name: "page_size", value: 100},
+        {name: "order", value: "asc"}
+      ]);
+    });
+
+  $(document)
+    .off("click.procmonCard", ".procmon-event-row")
+    .on("click.procmonCard", ".procmon-event-row", function(event) {
+      if ($(event.target).closest("a,button,input,select,textarea,details,summary").length) return;
+      openEvent($(this).data("seq"));
+    });
+
+  $(document)
+    .off("click.procmonFilter", ".procmon-card-filter")
+    .on("click.procmonFilter", ".procmon-card-filter", function() {
+      const field = String($(this).data("field") || "");
+      const value = String($(this).data("value") || "");
+      if (!field || !value) return;
+      const $input = $('#procmon-filter-form [name="' + field + '"]');
+      if ($input.length) {
+        $input.val(value);
+      } else {
+        $('#procmon-filter-form [name="q"]').val(field + ':"' + value.replace(/"/g, '\\"') + '"');
+      }
+      hideModal();
+      reloadProcmon(currentParams(1));
+    });
+
+  $(document)
+    .off("click.procmonCopy", "#procmon-copy-event")
+    .on("click.procmonCopy", "#procmon-copy-event", function() {
+      const text = $("#procmon-event-json").val() || "";
+      const $button = $(this);
+      copyText(text).then(function() {
+        const old = $button.html();
+        $button.html('<i class="fas fa-check me-1"></i>Copied');
+        setTimeout(function() { $button.html(old); }, 1200);
+      });
+    });
+
+  $(document)
+    .off("click.procmonCopyPath", "#procmon-copy-path")
+    .on("click.procmonCopyPath", "#procmon-copy-path", function() {
+      copyText(String($(this).data("path") || ""));
+    });
+})();
+</script>

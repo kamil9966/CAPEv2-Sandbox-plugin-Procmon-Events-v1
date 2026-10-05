@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+.DS_Store
+*.log
+.env
+.venv/
